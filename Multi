@@ -1,0 +1,150 @@
+# Fake News Detection using Machine Learning and Deep Learning
+
+### Importing neccessary libraries and Loading the Dataset
+
+
+import numpy as np
+import pandas as pd
+import seaborn as sns
+import re
+import xgboost as xgb
+from nltk.corpus import stopwords 
+from nltk.stem.porter import PorterStemmer 
+from sklearn.feature_extraction.text import TfidfVectorizer 
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score, confusion_matrix, ConfusionMatrixDisplay
+from sklearn.svm import SVC
+from sklearn.svm import LinearSVC
+from sklearn.ensemble import AdaBoostClassifier
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.multiclass import OneVsRestClassifier
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.linear_model import PassiveAggressiveClassifier
+from sklearn.preprocessing import LabelEncoder
+
+news_df = pd.read_csv('train (1).csv', names=["json ID", "label", "statement", "subject", "speaker", "job title", "state", "party",
+                         "barely true", "false", "half true", "mostly true", "pantson fire","context"])
+
+encoder = LabelEncoder()
+
+news_df['label'] = encoder.fit_transform(news_df['label'])
+
+news_df.head()
+
+news_df.shape
+
+sns.countplot(x='label', data=news_df)
+
+### Data Preprocessing
+
+news_df.isna().sum()
+
+news_df = news_df.fillna(' ')
+
+news_df.isna().sum()
+
+news_df['content'] = news_df['speaker']+" "+news_df['statement']
+
+news_df
+
+news_df['content']
+
+#### Stemming
+
+# stemming
+ps = PorterStemmer()
+def stemming(content):
+    stemmed_content = re.sub('[^a-zA-Z]',' ',content)
+    stemmed_content = stemmed_content.lower()
+    stemmed_content = stemmed_content.split()
+    stemmed_content = [ps.stem(word) for word in stemmed_content if not word in stopwords.words('english')]
+    stemmed_content = ' '.join(stemmed_content)
+    return stemmed_content
+
+news_df['content'] = news_df['content'].apply(stemming)
+
+news_df['content']
+
+X = news_df['content'].values
+y = news_df['label'].values
+
+print(X)
+
+#### Applying Tf-idf Vectorizer
+
+vector = TfidfVectorizer()
+vector.fit(X)
+X = vector.transform(X)
+
+print(X)
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2,stratify=y, random_state=42)
+
+X_train.shape
+
+X_test.shape
+
+### Applying ML models
+
+#### Logistic Regression
+
+model = LogisticRegression(solver='saga', max_iter=1000)
+model.fit(X_train,y_train)
+test_y_pred = model.predict(X_test)
+print("test accurracy :",accuracy_score(test_y_pred,y_test))
+confusion_mat = confusion_matrix(y_test, test_y_pred)
+confusion_mat_display = ConfusionMatrixDisplay(confusion_mat).plot()
+
+#### Support Vector Machine
+
+svm_model = OneVsRestClassifier(SVC(kernel='linear'))
+svm_model.fit(X_train, y_train)
+y_pred = svm_model.predict(X_test)
+accuracy = accuracy_score(y_test, y_pred)
+confusion_mat = confusion_matrix(y_test, y_pred)
+print('Accuracy:', accuracy)
+print('Confusion Matrix:', confusion_mat)
+confusion_mat_display = ConfusionMatrixDisplay(confusion_mat).plot()
+
+#### Naive Bayes
+
+NB = MultinomialNB()
+NB.fit(X_train, y_train)
+y_pred = NB.predict(X_test)
+print('Accuracy of NB  classifier on training set: {:.2f}'
+     .format(NB.score(X_train, y_train)))
+confusion_mat = confusion_matrix(y_test, y_pred)
+confusion_mat_display = ConfusionMatrixDisplay(confusion_mat).plot()
+
+#### Random Forest
+
+clf = RandomForestClassifier(n_estimators=100, max_depth=10, criterion='entropy', random_state=42, class_weight='balanced', bootstrap=True)
+clf.fit(X_train,y_train)
+y_pred = clf.predict(X_test)
+accuracy = accuracy_score(y_test, y_pred)
+print('Accuracy:',accuracy)
+confusion_mat = confusion_matrix(y_test, y_pred)
+confusion_mat_display = ConfusionMatrixDisplay(confusion_mat).plot()
+
+#### Passive Aggressive Algorithm
+
+clf = PassiveAggressiveClassifier(max_iter=100)
+clf.fit(X_train, y_train)
+y_pred = clf.predict(X_test)
+accuracy = accuracy_score(y_test, y_pred)
+print('Accuracy:', accuracy)
+confusion_mat = confusion_matrix(y_test, y_pred)
+confusion_mat_display = ConfusionMatrixDisplay(confusion_mat).plot()
+
+#### Decision Tree
+
+clf = DecisionTreeClassifier(max_depth=5)
+clf.fit(X_train, y_train)
+y_pred = clf.predict(X_test)
+accuracy = accuracy_score(y_test, y_pred)
+print('Accuracy:', accuracy)
+confusion_mat = confusion_matrix(y_test, y_pred)
+confusion_mat_display = ConfusionMatrixDisplay(confusion_mat).plot()
+
